@@ -1,6 +1,7 @@
 # 🎯 Advanced Penetration Testing Checklist for HTB, THM & OSCP
 
-A **comprehensive penetration testing checklist and methodology** for **Hack The Box (HTB)**, **TryHackMe (THM)**, and **OSCP-like labs**. This guide is designed for cybersecurity learners, ethical hackers, CTF enthusiasts, and OSCP aspirants seeking a **structured, repeatable approach** to **reconnaissance, enumeration, exploitation, privilege escalation, post-exploitation, lateral movement, and objective hunting**.  
+A **comprehensive penetration testing checklist and methodology** for **Hack The Box (HTB)**, **TryHackMe (THM)**, and **OSCP-like labs**. This guide is designed for cybersecurity learners, ethical hackers, CTF enthusiasts, and OSCP aspirants seeking a **structured, repeatable approach** to **reconnaissance, enumeration, exploitation, privilege escalation, post-exploitation, lateral movement, and objective hunting**.
+  
 **Keywords:** penetration testing, CTF, Hack The Box, TryHackMe, OSCP, ethical hacking, cybersecurity, Kali Linux, methodology, checklist.
 
 ---
